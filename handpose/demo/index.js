@@ -127,12 +127,24 @@ async function loadVideo() {
   return video;
 }
 
+function loadImage(url) {
+  console.log("httt loadImage");
+  return new Promise((resolve, reject) => {
+    let img = new Image();
+    img.addEventListener('load', e => resolve(img));
+    img.addEventListener('error', () => {
+      reject(new Error(`Failed to load image's URL: ${url}`));
+    });
+    img.src = url;
+  });
+}
+
 const main = async () => {
   model = await handpose.load();
   let video;
 
   try {
-    video = await loadVideo();
+    video = await loadImage("hand.jpg");
   } catch (e) {
     let info = document.getElementById('info');
     info.textContent = e.message;
@@ -146,13 +158,12 @@ const main = async () => {
 const landmarksRealTime = async (video) => {
   setupDatGui();
 
-  const stats = new Stats();
-  stats.showPanel(0);
-  document.body.appendChild(stats.dom);
+  //const stats = new Stats();
+  //stats.showPanel(0);
+  //document.body.appendChild(stats.dom);
 
-  videoWidth = video.videoWidth;
-  videoHeight = video.videoHeight;
-
+  videoWidth = video.width;
+  videoHeight = video.height;
   const canvas = document.getElementById('output');
 
   canvas.width = videoWidth;
@@ -176,7 +187,7 @@ const landmarksRealTime = async (video) => {
   [-VIDEO_WIDTH, 0, 0], [-VIDEO_WIDTH, -VIDEO_HEIGHT, 0]];
 
   async function frameLandmarks() {
-    stats.begin();
+    //stats.begin();
     ctx.drawImage(video, 0, 0, videoWidth, videoHeight, 0, 0, canvas.width, canvas.height);
     const predictions = await model.estimateHands(video);
     if (predictions.length > 0) {
@@ -208,8 +219,8 @@ const landmarksRealTime = async (video) => {
         scatterGLHasInitialized = true;
       }
     }
-    stats.end();
-    requestAnimationFrame(frameLandmarks);
+    //stats.end();
+    //requestAnimationFrame(frameLandmarks);
   };
 
   frameLandmarks();
