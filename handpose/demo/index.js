@@ -16,6 +16,8 @@
  */
 
 import * as handpose from '@tensorflow-models/handpose';
+import * as tfwebgpu from '@tensorflow/tfjs-backend-webgpu';
+import * as tf from '@tensorflow/tfjs-core';
 
 function isMobile() {
   const isAndroid = /Android/i.test(navigator.userAgent);
@@ -140,6 +142,7 @@ function loadImage(url) {
 }
 
 const main = async () => {
+  await tf.ready();
   model = await handpose.load();
   let video;
 

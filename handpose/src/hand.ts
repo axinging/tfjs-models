@@ -82,8 +82,9 @@ export class HandDetector {
     });
   }
 
-  private getBoundingBoxes(input: tf.Tensor4D): HandDetectorPrediction {
-    return tf.tidy(() => {
+  private async getBoundingBoxes(input: tf.Tensor4D): Promise<HandDetectorPrediction> {
+    //return tf.tidy(() => {
+    //return {
       const normalizedInput = tf.mul(tf.sub(input, 0.5), 2);
 
       // Currently tfjs-core does not pack depthwiseConv because it fails for
@@ -98,6 +99,8 @@ export class HandDetector {
       // Squeezing immediately because we are not batching inputs.
       const prediction: tf.Tensor2D =
           (this.model.predict(normalizedInput) as tf.Tensor3D).squeeze();
+      const detect_outputs_ = await Promise.all([prediction.data()]);
+      console.log("tfjsoo track_outputs="+detect_outputs_);
       tf.env().set('WEBGL_PACK_DEPTHWISECONV', savedWebglPackDepthwiseConvFlag);
 
       // Regression score for each anchor point.
@@ -108,6 +111,8 @@ export class HandDetector {
       const rawBoxes = tf.slice(prediction, [0, 1], [-1, 4]);
       const boxes = this.normalizeBoxes(rawBoxes);
 
+      await Promise.all([boxes.data()]);
+      await Promise.all([scores.data()]);
       const savedConsoleWarnFn = console.warn;
       console.warn = () => {};
       const boxesWithHands =
@@ -129,7 +134,7 @@ export class HandDetector {
           this.normalizeLandmarks(rawPalmLandmarks, boxIndex).reshape([-1, 2]);
 
       return {boxes: matchingBox, palmLandmarks};
-    });
+    //});
   }
 
   /**
@@ -138,25 +143,28 @@ export class HandDetector {
    *
    * @param input The image to classify.
    */
-  estimateHandBounds(input: tf.Tensor4D): Box {
+  async estimateHandBounds(input: tf.Tensor4D): Promise<Box> {
     const inputHeight = input.shape[1];
     const inputWidth = input.shape[2];
 
     const image: tf.Tensor4D =
         tf.tidy(() => input.resizeBilinear([this.width, this.height]).div(255));
-    const prediction = this.getBoundingBoxes(image);
+    const prediction = await this.getBoundingBoxes(image);
 
     if (prediction === null) {
       image.dispose();
       return null;
     }
 
+    await Promise.all([prediction.boxes.data()]);
     // Calling arraySync on both boxes and palmLandmarks because the tensors are
     // very small so it's not worth calling await array().
     const boundingBoxes =
         prediction.boxes.arraySync() as Array<[number, number, number, number]>;
     const startPoint = boundingBoxes[0].slice(0, 2) as [number, number];
     const endPoint = boundingBoxes[0].slice(2, 4) as [number, number];
+       
+    await Promise.all([prediction.palmLandmarks.data()]);
     const palmLandmarks =
         prediction.palmLandmarks.arraySync() as Array<[number, number]>;
 
