@@ -16,6 +16,8 @@
  */
 
 import * as handpose from '@tensorflow-models/handpose';
+import * as tfwebgpu from '@tensorflow/tfjs-backend-webgpu';
+import * as tf from '@tensorflow/tfjs-core';
 
 function isMobile() {
   const isAndroid = /Android/i.test(navigator.userAgent);
@@ -127,12 +129,30 @@ async function loadVideo() {
   return video;
 }
 
+function loadImage() {
+  return new Promise((resolve, reject) => {
+    let img = new Image();
+    img.addEventListener('load', e => resolve(img));
+    img.addEventListener('error', () => {
+      reject(new Error(`Failed to load image's URL: ${url}`));
+    });
+    img.src = "hand.jpg";
+  });
+}
+const videoOrImage = true;
 const main = async () => {
+  await tf.ready();
   model = await handpose.load();
   let video;
 
   try {
-    video = await loadVideo();
+    if (videoOrImage) {
+      video = await loadVideo();
+    }
+    else {
+      video = await loadImage();
+    }
+    
   } catch (e) {
     let info = document.getElementById('info');
     info.textContent = e.message;
@@ -146,13 +166,20 @@ const main = async () => {
 const landmarksRealTime = async (video) => {
   setupDatGui();
 
-  const stats = new Stats();
-  stats.showPanel(0);
-  document.body.appendChild(stats.dom);
+  //const stats = new Stats();
+  //stats.showPanel(0);
+  //document.body.appendChild(stats.dom);
 
-  videoWidth = video.videoWidth;
-  videoHeight = video.videoHeight;
-
+  let videoWidth, videoHeight;
+  if (videoOrImage) {
+    // For video.
+    videoWidth = video.videoWidth;
+    videoHeight = video.videoHeight;
+  } else {
+    // For image.
+    videoWidth = video.width;
+    videoHeight = video.height;
+  }
   const canvas = document.getElementById('output');
 
   canvas.width = videoWidth;
@@ -160,8 +187,8 @@ const landmarksRealTime = async (video) => {
 
   const ctx = canvas.getContext('2d');
 
-  video.width = videoWidth;
-  video.height = videoHeight;
+  //video.width = videoWidth;
+  //video.height = videoHeight;
 
   ctx.clearRect(0, 0, videoWidth, videoHeight);
   ctx.strokeStyle = "red";
@@ -176,9 +203,10 @@ const landmarksRealTime = async (video) => {
   [-VIDEO_WIDTH, 0, 0], [-VIDEO_WIDTH, -VIDEO_HEIGHT, 0]];
 
   async function frameLandmarks() {
-    stats.begin();
-    ctx.drawImage(video, 0, 0, videoWidth, videoHeight, 0, 0, canvas.width, canvas.height);
+    //stats.begin();
+    //ctx.drawImage(video, 0, 0, videoWidth, videoHeight, 0, 0, canvas.width, canvas.height);
     const predictions = await model.estimateHands(video);
+    ctx.drawImage(video, 0, 0, videoWidth, videoHeight, 0, 0, canvas.width, canvas.height);
     if (predictions.length > 0) {
       const result = predictions[0].landmarks;
       drawKeypoints(ctx, result, predictions[0].annotations);
@@ -208,8 +236,9 @@ const landmarksRealTime = async (video) => {
         scatterGLHasInitialized = true;
       }
     }
-    stats.end();
-    requestAnimationFrame(frameLandmarks);
+    //stats.end();
+    if(videoOrImage)
+     requestAnimationFrame(frameLandmarks);
   };
 
   frameLandmarks();
