@@ -198,6 +198,7 @@ export class HandPipeline {
           `backend - rotation kernel is not defined.`);
     }
 
+    console.log("estimateHand  100");
     const rotationMatrix = buildRotationMatrix(-angle, palmCenter);
 
     let box: Box;
@@ -225,12 +226,22 @@ export class HandPipeline {
         tf.env().get('WEBGL_PACK_DEPTHWISECONV');
     tf.env().set('WEBGL_PACK_DEPTHWISECONV', true);
     const [flag, keypoints] =
-        this.meshDetector.predict(handImage) as [tf.Tensor, tf.Tensor];
+       this.meshDetector.predict(handImage) as [tf.Tensor, tf.Tensor];
+    //const output = this.meshDetector.predict(handImage) as tf.Tensor[];
     tf.env().set('WEBGL_PACK_DEPTHWISECONV', savedWebglPackDepthwiseConvFlag);
 
     handImage.dispose();
-
+    console.log("estimateHand  1000");
+    /*
+    const flag = output[0];
+    const keypoints = output[1];
+    const detect_outputs_ = await Promise.all(output.data());
+    console.log("tfjsoo track_outputs="+detect_outputs_);
+    */
+    await Promise.all([flag.data()]);
+    await Promise.all([keypoints.data()]);
     const flagValue = flag.dataSync()[0];
+    console.log("estimateHand  1001: flagValue="+flagValue+",this.detectionConfidence="+this.detectionConfidence);
     flag.dispose();
 
     if (flagValue < this.detectionConfidence) {
@@ -252,6 +263,7 @@ export class HandPipeline {
 
     this.updateRegionsOfInterest(nextBoundingBox, false /* force replace */);
 
+    console.log("estimateHand  3000");
     const result: Prediction = {
       landmarks: coords,
       handInViewConfidence: flagValue,

@@ -25,8 +25,10 @@ import {Coords3D, HandPipeline, Prediction} from './pipeline';
 // Load the bounding box detector model.
 async function loadHandDetectorModel() {
   const HANDDETECT_MODEL_PATH =
-      'https://tfhub.dev/mediapipe/tfjs-model/handdetector/1/default/1';
-  return tfconv.loadGraphModel(HANDDETECT_MODEL_PATH, {fromTFHub: true});
+      'detectmodel.json';
+      //'https://tfhub.dev/mediapipe/tfjs-model/handdetector/1/default/1';
+  return tfconv.loadGraphModel(HANDDETECT_MODEL_PATH);
+  //return tfconv.loadGraphModel(HANDDETECT_MODEL_PATH, {fromTFHub: true});
 }
 
 const MESH_MODEL_INPUT_WIDTH = 256;
@@ -35,8 +37,10 @@ const MESH_MODEL_INPUT_HEIGHT = 256;
 // Load the mesh detector model.
 async function loadHandPoseModel() {
   const HANDPOSE_MODEL_PATH =
-      'https://tfhub.dev/mediapipe/tfjs-model/handskeleton/1/default/1';
-  return tfconv.loadGraphModel(HANDPOSE_MODEL_PATH, {fromTFHub: true});
+      'trackmodel.json';
+      //'https://tfhub.dev/mediapipe/tfjs-model/handskeleton/1/default/1';
+  //return tfconv.loadGraphModel(HANDPOSE_MODEL_PATH, {fromTFHub: true});
+  return tfconv.loadGraphModel(HANDPOSE_MODEL_PATH);
 }
 
 // In single shot detector pipelines, the output space is discretized into a set
@@ -45,7 +49,8 @@ async function loadHandPoseModel() {
 async function loadAnchors() {
   return tf.util
       .fetch(
-          'https://tfhub.dev/mediapipe/tfjs-model/handskeleton/1/default/1/anchors.json?tfjs-format=file')
+          'anchors.json')
+          //'https://tfhub.dev/mediapipe/tfjs-model/handskeleton/1/default/1/anchors.json?tfjs-format=file')
       .then(d => d.json());
 }
 
