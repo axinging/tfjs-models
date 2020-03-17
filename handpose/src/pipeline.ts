@@ -22,6 +22,7 @@ import {Box, cutBoxFromImageAndResize, enlargeBox, getBoxCenter, getBoxSize, shi
 import {HandDetector} from './hand';
 import {rotate as rotateCpu} from './rotate_cpu';
 import {rotate as rotateWebgl} from './rotate_gpu';
+import {rotate as rotateWebgpu} from './rotate_webgpu';
 import {buildRotationMatrix, computeRotation, dot, invertTransformMatrix, rotatePoint, TransformationMatrix} from './util';
 
 const UPDATE_REGION_OF_INTEREST_IOU_THRESHOLD = 0.8;
@@ -159,7 +160,7 @@ export class HandPipeline {
     const useFreshBox = this.shouldUpdateRegionsOfInterest();
     if (useFreshBox === true) {
       const boundingBoxPrediction =
-          this.boundingBoxDetector.estimateHandBounds(image);
+          await this.boundingBoxDetector.estimateHandBounds(image);
       if (boundingBoxPrediction === null) {
         image.dispose();
         this.regionsOfInterest = [];
@@ -187,6 +188,8 @@ export class HandPipeline {
 
     if (backend === 'webgl') {
       rotatedImage = rotateWebgl(image, angle, 0, palmCenterNormalized);
+    } else if (backend === 'webgpu') {
+      rotatedImage = rotateWebgpu(image, angle, 0, palmCenterNormalized);
     } else if (backend === 'cpu') {
       rotatedImage = rotateCpu(image, angle, 0, palmCenterNormalized);
     } else {
@@ -194,7 +197,7 @@ export class HandPipeline {
           `Handpose is not yet supported by the ${backend} ` +
           `backend - rotation kernel is not defined.`);
     }
-
+    image.dispose();
     const rotationMatrix = buildRotationMatrix(-angle, palmCenter);
 
     let box: Box;
@@ -226,7 +229,7 @@ export class HandPipeline {
     tf.env().set('WEBGL_PACK_DEPTHWISECONV', savedWebglPackDepthwiseConvFlag);
 
     handImage.dispose();
-
+    await Promise.all([flag.data(), keypoints.data()]);
     const flagValue = flag.dataSync()[0];
     flag.dispose();
 

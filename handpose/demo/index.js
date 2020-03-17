@@ -16,6 +16,8 @@
  */
 
 import * as handpose from '@tensorflow-models/handpose';
+import * as tfwebgpu from '@tensorflow/tfjs-backend-webgpu';
+import * as tf from '@tensorflow/tfjs-core';
 
 function isMobile() {
   const isAndroid = /Android/i.test(navigator.userAgent);
@@ -24,13 +26,13 @@ function isMobile() {
 }
 
 let videoWidth, videoHeight, scatterGLHasInitialized = false, scatterGL,
-  fingerLookupIndices = {
-    thumb: [0, 1, 2, 3, 4],
-    indexFinger: [0, 5, 6, 7, 8],
-    middleFinger: [0, 9, 10, 11, 12],
-    ringFinger: [0, 13, 14, 15, 16],
-    pinky: [0, 17, 18, 19, 20]
-  }; // for rendering each finger as a polyline
+                             fingerLookupIndices = {
+                               thumb: [0, 1, 2, 3, 4],
+                               indexFinger: [0, 5, 6, 7, 8],
+                               middleFinger: [0, 9, 10, 11, 12],
+                               ringFinger: [0, 13, 14, 15, 16],
+                               pinky: [0, 17, 18, 19, 20]
+                             };  // for rendering each finger as a polyline
 
 const VIDEO_WIDTH = 640;
 const VIDEO_HEIGHT = 500;
@@ -51,7 +53,7 @@ function setupDatGui() {
   if (renderPointcloud) {
     gui.add(state, 'renderPointcloud').onChange(render => {
       document.querySelector('#scatter-gl-container').style.display =
-        render ? 'inline-block' : 'none';
+          render ? 'inline-block' : 'none';
     });
   }
 }
@@ -98,7 +100,7 @@ let model;
 async function setupCamera() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     throw new Error(
-      'Browser API navigator.mediaDevices.getUserMedia not available');
+        'Browser API navigator.mediaDevices.getUserMedia not available');
   }
 
   const video = document.getElementById('video');
@@ -127,7 +129,9 @@ async function loadVideo() {
   return video;
 }
 
-const main = async () => {
+const main =
+    async () => {
+  await tf.ready();
   model = await handpose.load();
   let video;
 
@@ -150,8 +154,8 @@ const landmarksRealTime = async (video) => {
   stats.showPanel(0);
   document.body.appendChild(stats.dom);
 
-  videoWidth = video.videoWidth;
-  videoHeight = video.videoHeight;
+  const videoWidth = video.videoWidth;
+  const videoHeight = video.videoHeight;
 
   const canvas = document.getElementById('output');
 
@@ -160,25 +164,26 @@ const landmarksRealTime = async (video) => {
 
   const ctx = canvas.getContext('2d');
 
-  video.width = videoWidth;
-  video.height = videoHeight;
-
   ctx.clearRect(0, 0, videoWidth, videoHeight);
-  ctx.strokeStyle = "red";
-  ctx.fillStyle = "red";
+  ctx.strokeStyle = 'red';
+  ctx.fillStyle = 'red';
 
   ctx.translate(canvas.width, 0);
   ctx.scale(-1, 1);
 
   // These anchor points allow the hand pointcloud to resize according to its
   // position in the input.
-  const ANCHOR_POINTS = [[0, 0, 0], [0, -VIDEO_HEIGHT, 0],
-  [-VIDEO_WIDTH, 0, 0], [-VIDEO_WIDTH, -VIDEO_HEIGHT, 0]];
+  const ANCHOR_POINTS = [
+    [0, 0, 0], [0, -VIDEO_HEIGHT, 0], [-VIDEO_WIDTH, 0, 0],
+    [-VIDEO_WIDTH, -VIDEO_HEIGHT, 0]
+  ];
 
   async function frameLandmarks() {
     stats.begin();
-    ctx.drawImage(video, 0, 0, videoWidth, videoHeight, 0, 0, canvas.width, canvas.height);
     const predictions = await model.estimateHands(video);
+    ctx.drawImage(
+        video, 0, 0, videoWidth, videoHeight, 0, 0, canvas.width,
+        canvas.height);
     if (predictions.length > 0) {
       const result = predictions[0].landmarks;
       drawKeypoints(ctx, result, predictions[0].annotations);
@@ -188,19 +193,21 @@ const landmarksRealTime = async (video) => {
           return [-point[0], -point[1], -point[2]];
         });
 
-        const dataset = new ScatterGL.Dataset([...pointsData, ...ANCHOR_POINTS]);
+        const dataset =
+            new ScatterGL.Dataset([...pointsData, ...ANCHOR_POINTS]);
 
         if (!scatterGLHasInitialized) {
           scatterGL.render(dataset);
 
           const fingers = Object.keys(fingerLookupIndices);
 
-          scatterGL.setSequences(fingers.map(finger => ({ indices: fingerLookupIndices[finger] })));
+          scatterGL.setSequences(
+              fingers.map(finger => ({indices: fingerLookupIndices[finger]})));
           scatterGL.setPointColorer((index) => {
             if (index < pointsData.length) {
               return 'steelblue';
             }
-            return 'white'; // Hide.
+            return 'white';  // Hide.
           });
         } else {
           scatterGL.updateDataset(dataset);
@@ -216,15 +223,15 @@ const landmarksRealTime = async (video) => {
 
   if (renderPointcloud) {
     document.querySelector('#scatter-gl-container').style =
-      `width: ${VIDEO_WIDTH}px; height: ${VIDEO_HEIGHT}px;`;
+        `width: ${VIDEO_WIDTH}px; height: ${VIDEO_HEIGHT}px;`;
 
     scatterGL = new ScatterGL(
-      document.querySelector('#scatter-gl-container'),
-      { 'rotateOnStart': false, 'selectEnabled': false });
+        document.querySelector('#scatter-gl-container'),
+        {'rotateOnStart': false, 'selectEnabled': false});
   }
 };
 
 navigator.getUserMedia = navigator.getUserMedia ||
-  navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+    navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 
 main();
