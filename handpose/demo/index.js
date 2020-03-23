@@ -129,7 +129,7 @@ async function loadVideo() {
   return video;
 }
 
-function loadImage(url) {
+function loadImage() {
   console.log("httt loadImage");
   return new Promise((resolve, reject) => {
     let img = new Image();
@@ -137,17 +137,23 @@ function loadImage(url) {
     img.addEventListener('error', () => {
       reject(new Error(`Failed to load image's URL: ${url}`));
     });
-    img.src = url;
+    img.src = "hand.jpg";
   });
 }
-
+const videoOrImage = true;
 const main = async () => {
   await tf.ready();
   model = await handpose.load();
   let video;
 
   try {
-    video = await loadImage("hand.jpg");
+    if (videoOrImage) {
+      video = await loadVideo();
+    }
+    else {
+      video = await loadImage();
+    }
+    
   } catch (e) {
     let info = document.getElementById('info');
     info.textContent = e.message;
@@ -165,8 +171,16 @@ const landmarksRealTime = async (video) => {
   //stats.showPanel(0);
   //document.body.appendChild(stats.dom);
 
+  let videoWidth, videoHeight;
+  // For video
+  if (videoOrImage) {
+     videoWidth = video.videoWidth;
+     videoHeight = video.videoHeight;
+  } else {
+  // For img
   videoWidth = video.width;
   videoHeight = video.height;
+  }
   const canvas = document.getElementById('output');
 
   canvas.width = videoWidth;
@@ -174,8 +188,8 @@ const landmarksRealTime = async (video) => {
 
   const ctx = canvas.getContext('2d');
 
-  video.width = videoWidth;
-  video.height = videoHeight;
+  //video.width = videoWidth;
+  //video.height = videoHeight;
 
   ctx.clearRect(0, 0, videoWidth, videoHeight);
   ctx.strokeStyle = "red";

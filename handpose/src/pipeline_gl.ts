@@ -22,7 +22,7 @@ import {Box, cutBoxFromImageAndResize, enlargeBox, getBoxCenter, getBoxSize, shi
 import {HandDetector} from './hand';
 import {rotate as rotateCpu} from './rotate_cpu';
 import {rotate as rotateWebgl} from './rotate_gpu';
-import {rotate as rotateWebgpu} from './rotate_webgpu';
+//import {rotate as rotateWebgpu} from './rotate_webgpu';
 import {buildRotationMatrix, computeRotation, dot, invertTransformMatrix, rotatePoint, TransformationMatrix} from './util';
 
 const UPDATE_REGION_OF_INTEREST_IOU_THRESHOLD = 0.8;
@@ -156,6 +156,7 @@ export class HandPipeline {
         });
   }
 
+
   private generateCaseInputs(totalSizeTensor: number) {
     const inp = new Array(totalSizeTensor);
   
@@ -212,8 +213,8 @@ export class HandPipeline {
 
 if (backend === 'webgl') {
   rotatedImage = rotateWebgl(imagex, angle, 0, palmCenterNormalized);
-} else if (backend === 'webgpu') {
-  rotatedImage = rotateWebgpu(imagex, angle, 0, palmCenterNormalized);
+  //} else if (backend === 'webgpu') {
+  //rotatedImage = rotateWebgpu(imagex, angle, 0, palmCenterNormalized);
 } else if (backend === 'cpu') {
   rotatedImage = rotateCpu(imagex, angle, 0, palmCenterNormalized);
 } else {
@@ -225,16 +226,45 @@ console.warn("ximage="+ await imagex.data());
 
 }
 
-
-//-----------
-
+/*-----------
+{
+  const inputShape: [number, number, number, number] =
+  [1, 2, 2, 2];
+  
+  const imagex = tf.tensor4d(
+    [[
+      [[-1.81506593, 1.00900095], [-0.05199118, 0.26311377]],
+      [[-1.18469792, -0.34780521], [2.04971242, -0.65154692]]
+    ]],
+    inputShape);
+  //const palmCenter = [0,0];
+  const palmCenterNormalizedx: [number, number] = [0.1, 0.1];
+  
+  if (backend === 'webgl') {
+    rotatedImage = rotateWebgl(imagex, angle, 0, palmCenterNormalizedx);
+    //} else if (backend === 'webgpu') {
+    //rotatedImage = rotateWebgpu(imagex, angle, 0, palmCenterNormalizedx);
+  } else if (backend === 'cpu') {
+    rotatedImage = rotateCpu(imagex, angle, 0, palmCenterNormalizedx);
+  } else {
+    throw new Error(
+        `Handpose is not yet supported by the ${backend} ` +
+        `backend - rotation kernel is not defined.`);
+  }
+  console.warn("ximage="+ await imagex.data());
+  
+  }
+  
+  
+  //-----------
+  */
 
     console.log("currentBox="+currentBox+",palmCenter="+palmCenter+",angle="+angle);
     console.warn("originalimage="+ await image.data());
     if (backend === 'webgl') {
       rotatedImage = rotateWebgl(image, angle, 0, palmCenterNormalized);
-    } else if (backend === 'webgpu') {
-      rotatedImage = rotateWebgpu(image, angle, 0, palmCenterNormalized);
+      //} else if (backend === 'webgpu') {
+      //rotatedImage = rotateWebgpu(image, angle, 0, palmCenterNormalized);
     } else if (backend === 'cpu') {
       rotatedImage = rotateCpu(image, angle, 0, palmCenterNormalized);
     } else {
@@ -242,6 +272,7 @@ console.warn("ximage="+ await imagex.data());
           `Handpose is not yet supported by the ${backend} ` +
           `backend - rotation kernel is not defined.`);
     }
+
     console.warn("rotatedImage="+ await rotatedImage.data());
     console.log("estimateHand  100");
     const rotationMatrix = buildRotationMatrix(-angle, palmCenter);
@@ -297,16 +328,15 @@ console.warn("ximage="+ await imagex.data());
     await Promise.all([flag.data()]);
     await Promise.all([keypoints.data()]);
     const flagValue = flag.dataSync()[0];
-    if (flagValue > 0.5)
     console.log("estimateHand  1001: flagValue="+flagValue+",this.detectionConfidence="+this.detectionConfidence);
     flag.dispose();
-/*
+
     if (flagValue < this.detectionConfidence) {
       keypoints.dispose();
       this.regionsOfInterest = [];
       return null;
     }
-*/
+
     const keypointsReshaped = tf.reshape(keypoints, [-1, 3]);
     // Calling arraySync() because the tensor is very small so it's not worth
     // calling await array().

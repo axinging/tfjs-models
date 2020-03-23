@@ -48,7 +48,8 @@ export function rotate(
       vec3 fill = vec3(${fillValue.join(',')});
       float outputValue = fill[coords[3]];`;
   }
-
+  console.log("rotate image.shape="+image.shape+", sinFactor="+sinFactor+",cosFactor="+cosFactor);
+  console.log("rotate  centerX="+centerX+", centerY="+centerY+",fillSnippet="+fillSnippet);
   const program: tf.webgl.GPGPUProgram = {
     variableNames: ['Image'],
     outputShape: imageShape,

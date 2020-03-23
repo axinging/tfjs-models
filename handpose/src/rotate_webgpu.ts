@@ -41,6 +41,8 @@ export function rotate(
       float outputValue = fill[coords[3]];`;
   }
 
+  console.log("rotate image.shape="+image.shape+", sinFactor="+sinFactor+",cosFactor="+cosFactor);
+  console.log("rotate  centerX="+centerX+", centerY="+centerY+",fillSnippet="+fillSnippet);
   const program: tfwebgpu.webgpu.WebGPUProgram = {
     variableNames: ['Image'],
     outputShape: imageShape,
@@ -56,7 +58,7 @@ export function rotate(
     dispatch: tfwebgpu.webgpu.webgpu_util.computeDispatch(
         tfwebgpu.webgpu.webgpu_util.flatDispatchLayout(imageShape), imageShape, [16, 1, 1],
         //dispatchLayout, imageShape, workGroupSize,
-        [4/*this.workPerThread*/, 1, 1]),
+        [1/*this.workPerThread*/, 1, 1]),
     userCode: `
       void main() {
         int index = int(gl_GlobalInvocationID.x);
