@@ -276,13 +276,13 @@ console.warn("ximage="+ await imagex.data());
     tf.env().set('WEBGL_PACK_DEPTHWISECONV', true);
     */
     const [flag, keypoints] =
-       this.meshDetector.predictTrack(handImage) as [tf.Tensor, tf.Tensor];
+       this.meshDetector.predict(handImage) as [tf.Tensor, tf.Tensor];
     const keypoints_outputs_ = await Promise.all([keypoints.data()]);
     const flag_outputs_ = await Promise.all([flag.data()]);
     console.log("keypoints_outputs_="+keypoints_outputs_);
     console.log("flag_outputs_="+flag_outputs_);
     /*
-    const output = this.meshDetector.predictTrack(handImage) as tf.Tensor;
+    const output = this.meshDetector.predict(handImage) as tf.Tensor;
     const detect_outputs_ = await Promise.all([output.data()]);
     console.log("tfjsoo track_outputs="+detect_outputs_);
     if (0)
@@ -293,20 +293,19 @@ console.warn("ximage="+ await imagex.data());
     //tf.env().set('WEBGL_PACK_DEPTHWISECONV', savedWebglPackDepthwiseConvFlag);
 
     handImage.dispose();
-    console.log("estimateHand  1000");
     await Promise.all([flag.data()]);
     await Promise.all([keypoints.data()]);
     const flagValue = flag.dataSync()[0];
     if (flagValue > 0.5)
-    console.log("estimateHand  1001: flagValue="+flagValue+",this.detectionConfidence="+this.detectionConfidence);
+      console.log("estimateHand  1001: flagValue="+flagValue+",this.detectionConfidence="+this.detectionConfidence);
     flag.dispose();
-/*
+
     if (flagValue < this.detectionConfidence) {
       keypoints.dispose();
       this.regionsOfInterest = [];
       return null;
     }
-*/
+
     const keypointsReshaped = tf.reshape(keypoints, [-1, 3]);
     // Calling arraySync() because the tensor is very small so it's not worth
     // calling await array().
@@ -320,7 +319,6 @@ console.warn("ximage="+ await imagex.data());
 
     this.updateRegionsOfInterest(nextBoundingBox, false /* force replace */);
 
-    console.log("estimateHand  3000");
     const result: Prediction = {
       landmarks: coords,
       handInViewConfidence: flagValue,

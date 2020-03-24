@@ -307,13 +307,13 @@ console.warn("ximage="+ await imagex.data());
     tf.env().set('WEBGL_PACK_DEPTHWISECONV', true);
     */
     const [flag, keypoints] =
-       this.meshDetector.predictTrack(handImage) as [tf.Tensor, tf.Tensor];
+       this.meshDetector.predict(handImage) as [tf.Tensor, tf.Tensor];
     const keypoints_outputs_ = await Promise.all([keypoints.data()]);
     const flag_outputs_ = await Promise.all([flag.data()]);
     console.log("keypoints_outputs_="+keypoints_outputs_);
     console.log("flag_outputs_="+flag_outputs_);
     /*
-    const output = this.meshDetector.predictTrack(handImage) as tf.Tensor;
+    const output = this.meshDetector.predict(handImage) as tf.Tensor;
     const detect_outputs_ = await Promise.all([output.data()]);
     console.log("tfjsoo track_outputs="+detect_outputs_);
     if (0)
