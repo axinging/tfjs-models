@@ -138,6 +138,7 @@ export class HandDetector {
     const matchingBox = tf.slice(boxes, [boxIndex, 0], [1, -1]);
 
     const rawPalmLandmarks = tf.slice(prediction, [boxIndex, 5], [1, 14]);
+    prediction.dispose();
     const palmLandmarks: tf.Tensor2D =
         this.normalizeLandmarks(rawPalmLandmarks, boxIndex).reshape([-1, 2]);
     rawPalmLandmarks.dispose();
