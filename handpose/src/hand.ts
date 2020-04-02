@@ -25,6 +25,12 @@ type HandDetectorPrediction = {
   palmLandmarks: tf.Tensor2D
 };
 
+type BoxesAndScores = {
+  boxes: tf.Tensor2D,
+  scores: tf.Tensor1D,
+  prediction: tf.Tensor2D
+};
+
 export class HandDetector {
   private model: tfconv.GraphModel;
   private width: number;
@@ -82,34 +88,38 @@ export class HandDetector {
     });
   }
 
+  private predictAndNormalizeBoxes(input: tf.Tensor4D): BoxesAndScores {
+    return tf.tidy(() => {
+      const normalizedInput = tf.mul(tf.sub(input, 0.5), 2);
+
+      // Currently tfjs-core does not pack depthwiseConv because it fails for
+      // very large inputs (https://github.com/tensorflow/tfjs/issues/1652).
+      // TODO(annxingyuan): call tf.enablePackedDepthwiseConv when available
+      // (https://github.com/tensorflow/tfjs/issues/2821)
+      const savedWebglPackDepthwiseConvFlag =
+          tf.env().get('WEBGL_PACK_DEPTHWISECONV');
+      tf.env().set('WEBGL_PACK_DEPTHWISECONV', true);
+      // The model returns a tensor with the following shape:
+      //  [1 (batch), 2944 (anchor points), 19 (data for each anchor)]
+      // Squeezing immediately because we are not batching inputs.
+      const prediction: tf.Tensor2D =
+          (this.model.predict(normalizedInput) as tf.Tensor3D).squeeze();
+      tf.env().set('WEBGL_PACK_DEPTHWISECONV', savedWebglPackDepthwiseConvFlag);
+
+      // Regression score for each anchor point.
+      const scores: tf.Tensor1D =
+          tf.sigmoid(tf.slice(prediction, [0, 0], [-1, 1])).squeeze();
+
+      // Bounding box for each anchor point.
+      const rawBoxes = tf.slice(prediction, [0, 1], [-1, 4]);
+      const boxes = this.normalizeBoxes(rawBoxes);
+      return {boxes, scores, prediction};
+    });
+  }
+
   private async getBoundingBoxes(input: tf.Tensor4D):
       Promise<HandDetectorPrediction> {
-    // return tf.tidy(() => {
-    // return {
-    const normalizedInput = tf.mul(tf.sub(input, 0.5), 2);
-
-    // Currently tfjs-core does not pack depthwiseConv because it fails for
-    // very large inputs (https://github.com/tensorflow/tfjs/issues/1652).
-    // TODO(annxingyuan): call tf.enablePackedDepthwiseConv when available
-    // (https://github.com/tensorflow/tfjs/issues/2821)
-    const savedWebglPackDepthwiseConvFlag =
-        tf.env().get('WEBGL_PACK_DEPTHWISECONV');
-    tf.env().set('WEBGL_PACK_DEPTHWISECONV', true);
-    // The model returns a tensor with the following shape:
-    //  [1 (batch), 2944 (anchor points), 19 (data for each anchor)]
-    // Squeezing immediately because we are not batching inputs.
-    const prediction: tf.Tensor2D =
-        (this.model.predict(normalizedInput) as tf.Tensor3D).squeeze();
-    tf.env().set('WEBGL_PACK_DEPTHWISECONV', savedWebglPackDepthwiseConvFlag);
-
-    // Regression score for each anchor point.
-    const scores: tf.Tensor1D =
-        tf.sigmoid(tf.slice(prediction, [0, 0], [-1, 1])).squeeze();
-
-    // Bounding box for each anchor point.
-    const rawBoxes = tf.slice(prediction, [0, 1], [-1, 4]);
-    const boxes = this.normalizeBoxes(rawBoxes);
-
+    const {boxes, scores, prediction} = this.predictAndNormalizeBoxes(input);
     await Promise.all([boxes.data(), scores.data()]);
     const savedConsoleWarnFn = console.warn;
     console.warn = () => {};
@@ -130,9 +140,8 @@ export class HandDetector {
     const rawPalmLandmarks = tf.slice(prediction, [boxIndex, 5], [1, 14]);
     const palmLandmarks: tf.Tensor2D =
         this.normalizeLandmarks(rawPalmLandmarks, boxIndex).reshape([-1, 2]);
-
+    rawPalmLandmarks.dispose();
     return {boxes: matchingBox, palmLandmarks};
-    //});
   }
 
   /**
