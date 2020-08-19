@@ -199,6 +199,17 @@ export function getInputTensorDimensions(input: PosenetInput):
                                       [input.height, input.width];
 }
 
+async function fromPixelsAsync(input: ImageData|HTMLImageElement|
+                               HTMLCanvasElement|HTMLVideoElement|
+                               tf.backend_util.PixelData) {
+  // TODO: Use real async fromPixels instead.
+  return await tf.browser_async.fromPixelsAsync(input);
+}
+
+export async function toInputTensorAsync(input: PosenetInput) {
+  return input instanceof tf.Tensor ? input : await fromPixelsAsync(input);
+}
+
 export function toInputTensor(input: PosenetInput) {
   return input instanceof tf.Tensor ? input : tf.browser.fromPixels(input);
 }
@@ -244,6 +255,36 @@ export function padAndResizeTo(
 
     return imageTensor.resizeBilinear([targetH, targetW]);
   });
+
+  return {resized, padding: {top: padT, left: padL, right: padR, bottom: padB}};
+}
+
+export async function padAndResizeToAsync(
+    input: PosenetInput, [targetH, targetW]: [number, number]) {
+  //:{resized: tf.Tensor3D, padding: Padding} {
+  const [height, width] = getInputTensorDimensions(input);
+  const targetAspect = targetW / targetH;
+  const aspect = width / height;
+  let [padT, padB, padL, padR] = [0, 0, 0, 0];
+  if (aspect < targetAspect) {
+    // pads the width
+    padT = 0;
+    padB = 0;
+    padL = Math.round(0.5 * (targetAspect * height - width));
+    padR = Math.round(0.5 * (targetAspect * height - width));
+  } else {
+    // pads the height
+    padT = Math.round(0.5 * ((1.0 / targetAspect) * width - height));
+    padB = Math.round(0.5 * ((1.0 / targetAspect) * width - height));
+    padL = 0;
+    padR = 0;
+  }
+
+  let imageTensor = await toInputTensorAsync(input);
+  imageTensor = tf.pad3d(imageTensor, [[padT, padB], [padL, padR], [0, 0]]);
+  const resized = imageTensor.resizeBilinear([targetH, targetW]);
+  // TODO: dispose tensor here properly!
+  imageTensor.dispose();
 
   return {resized, padding: {top: padT, left: padL, right: padR, bottom: padB}};
 }

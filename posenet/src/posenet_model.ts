@@ -17,6 +17,7 @@
 
 import * as tfconv from '@tensorflow/tfjs-converter';
 import * as tf from '@tensorflow/tfjs-core';
+import {Tensor3D} from '@tensorflow/tfjs-core';
 
 import {BaseModel} from './base_model';
 import {mobileNetCheckpoint, resNet50Checkpoint} from './checkpoints';
@@ -25,7 +26,7 @@ import {decodeMultiplePoses} from './multi_pose/decode_multiple_poses';
 import {ResNet} from './resnet';
 import {decodeSinglePose} from './single_pose/decode_single_pose';
 import {InputResolution, MobileNetMultiplier, Pose, PoseNetArchitecture, PosenetInput, PoseNetOutputStride, PoseNetQuantBytes} from './types';
-import {assertValidOutputStride, assertValidResolution, getInputTensorDimensions, getValidInputResolutionDimensions, padAndResizeTo, scaleAndFlipPoses, toTensorBuffers3D, validateInputResolution} from './util';
+import {assertValidOutputStride, assertValidResolution, getInputTensorDimensions, getValidInputResolutionDimensions, padAndResizeToAsync, scaleAndFlipPoses, toTensorBuffers3D, validateInputResolution} from './util';
 
 /**
  * PoseNet model loading is configurable using the following config dictionary.
@@ -292,10 +293,11 @@ export class PoseNet {
 
     const [height, width] = getInputTensorDimensions(input);
 
-    const {resized, padding} = padAndResizeTo(input, inputResolution);
+    const {resized, padding} =
+        await padAndResizeToAsync(input, inputResolution);
 
     const {heatmapScores, offsets, displacementFwd, displacementBwd} =
-        this.baseModel.predict(resized);
+        this.baseModel.predict(resized as Tensor3D);
 
     const allTensorBuffers = await toTensorBuffers3D(
         [heatmapScores, offsets, displacementFwd, displacementBwd]);
@@ -354,10 +356,11 @@ export class PoseNet {
 
     const [height, width] = getInputTensorDimensions(input);
 
-    const {resized, padding} = padAndResizeTo(input, inputResolution);
+    const {resized, padding} =
+        await padAndResizeToAsync(input, inputResolution);
 
     const {heatmapScores, offsets, displacementFwd, displacementBwd} =
-        this.baseModel.predict(resized);
+        this.baseModel.predict(resized  as Tensor3D);
 
     const pose = await decodeSinglePose(heatmapScores, offsets, outputStride);
     const poses = [pose];
